@@ -311,6 +311,7 @@ const request_description_t vnet_route_description = {
         { "monitoring",             REQ_T_STRING },
         { "adv_prefix",             REQ_T_IP_PREFIX },
         { "check_directly_connected", REQ_T_BOOL },
+        { "local_endpoint",          REQ_T_BOOL_LIST},
     },
     { }
 };
@@ -521,6 +522,7 @@ private:
     std::map<std::string, VNetNextHopGroupInfoTable> syncd_nexthop_groups_;
     std::map<std::string, VNetTunnelRouteTable> syncd_tunnel_routes_;
     std::map<std::string, bool> vnet_tunnel_route_check_directly_connected;
+    std::vector<swss::IpAddress> vnet_local_endpoints_;
     BfdSessionTable bfd_sessions_;
     std::map<std::string, MonitorSessionTable> monitor_info_;
     std::map<std::string, VNetEndpointInfoTable> nexthop_info_;

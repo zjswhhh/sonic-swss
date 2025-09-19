@@ -2772,6 +2772,7 @@ bool VNetRouteOrch::handleTunnel(const Request& request)
     bool has_priority_ep = false;
     bool has_adv_pfx = false;
     bool check_directly_connected = false;
+    vector<bool> is_endpoint_local;
     for (const auto& name: request.getAttrFieldNames())
     {
         if (name == "endpoint")
@@ -2813,6 +2814,10 @@ bool VNetRouteOrch::handleTunnel(const Request& request)
         {
             check_directly_connected = request.getAttrBool(name);
         }
+        else if (name == "local_endpoint")
+        {
+            is_endpoint_local = request.getAttrBoolList(name);
+        }
         else
         {
             SWSS_LOG_INFO("Unknown attribute: %s", name.c_str());
@@ -2841,6 +2846,26 @@ bool VNetRouteOrch::handleTunnel(const Request& request)
     {
         SWSS_LOG_ERROR("Primary/backup behaviour cannot function without endpoint monitoring.");
         return true;
+    }
+
+    if (check_directly_connected)
+    {
+        if (!is_endpoint_local.empty() && is_endpoint_local.size() != ip_list.size())
+        {
+            SWSS_LOG_ERROR("Local endpoint size of %zu does not match endpoint size of %zu", is_endpoint_local.size(), ip_list.size());
+            return false;
+        }
+
+        if (!is_endpoint_local.empty())
+        {
+            for (size_t idx_ip = 0; idx_ip < ip_list.size(); idx_ip++)
+            {
+                if (is_endpoint_local[idx_ip])
+                {
+                    vnet_local_endpoints_.push_back(ip_list[idx_ip]);
+                }
+            }
+        }
     }
 
     const std::string& vnet_name = request.getKeyString(0);
@@ -3010,9 +3035,11 @@ bool VNetRouteOrch::isLocalEndpoint(const string&vnet, const IpAddress &ipAddr)
         return false;
     }
 
+    bool in_local = std::find(vnet_local_endpoints_.begin(), vnet_local_endpoints_.end(), ipAddr) != vnet_local_endpoints_.end();
     NeighborEntry n;
     MacAddress m;
-    return gNeighOrch->getNeighborEntry(ipAddr, n, m);
+
+    return gNeighOrch->getNeighborEntry(ipAddr, n, m) || in_local;
 }
 
 bool VNetRouteOrch::isPartiallyLocal(const std::vector<swss::IpAddress>& ip_list)
